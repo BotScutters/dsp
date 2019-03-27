@@ -69,16 +69,193 @@ Cohen's D is an example of effect size.  Other examples of effect size are:  cor
 
 You will see effect size again and again in results of algorithms that are run in data science.  For instance, in the bootcamp, when you run a regression analysis, you will recognize the t-statistic as an example of effect size.
 
+### _Question:_
+
+Using the variable totalwgt_lb, investigate whether first babies are lighter or heavier than others. Compute Cohen’s d to quantify the difference between the groups. How does it compare to the difference in pregnancy length?
+
+### _Answer:_
+
+I used the code block below to investigate the question.
+
+```python
+# Compute and display summary statisticss for each group
+display(firsts['totalwgt_lb'].describe(), 
+        others['totalwgt_lb'].describe())
+
+# Compute and display Cohen's effect size
+print('Cohen\'s effect size: ', CohenEffectSize(firsts['totalwgt_lb'], others['totalwgt_lb']))
+```
+
+### Summary stats for weights of firstborn and other children:
+
+#### Firstborn
+
+```
+count    4363.000000
+mean        7.201094
+std         1.420573
+min         0.125000
+25%         6.437500
+50%         7.312500
+75%         8.000000
+max        15.437500
+Name: totalwgt_lb, dtype: float64
+```
+
+#### Other
+
+```
+count    4675.000000
+mean        7.325856
+std         1.394195
+min         0.562500
+25%         6.500000
+50%         7.375000
+75%         8.187500
+max        14.000000
+Name: totalwgt_lb, dtype: float64
+```
+
+Just looking at the summary statistics, we can see that firstborn children are roughly 0.125 lbs lighter than their future siblings, on average. That's a pretty small number compared to means > 7 and standard deviations around 1.4. Quantifying that with Cohen's _d_:
+
+#### Cohen's effect size
+
+```
+Cohen's effect size:  -0.088672927072602
+```
+
+A _d_ of ~0.089 indicates that the effect size here is about three times a large as with pregnancy length. However, it remains true that this is a pretty small effect size. Cohen suggests that effect sizes smaller than 0.2 are trivial.
+
 ### Q2. [Think Stats Chapter 3 Exercise 1](statistics/3-1-actual_biased.md) (actual vs. biased)
 This problem presents a robust example of actual vs biased data.  As a data scientist, it will be important to examine not only the data that is available, but also the data that may be missing but highly relevant.  You will see how the absence of this relevant data will bias a dataset, its distribution, and ultimately, its statistical interpretation.
 
+### _Question:_
+
+Something like the class size paradox appears if you survey children and ask how many children are in their family. Families with many children are more likely to appear in your sample, and families with no children have no chance to be in the sample. Use the NSFG respondent variable NUMKDHH to construct the actual distribution for the number of children under 18 in the household. Now compute the biased distribution we would see if we surveyed the children
+and asked them how many children under 18 (including themselves) are in their household. Plot the actual and biased distributions, and compute their means. As a starting place, you can use chap03ex.ipynb.
+
+### _Answer:_
+
+I used the code block below to investigate the question.
+
+```python
+# Read in data
+resp = nsfg.ReadFemResp()
+
+# Compute actual pmf and print mean
+actual_pmf = thinkstats2.Pmf(resp['numkdhh'], label='actual')
+print('Actual mean: ', actual_pmf.Mean())
+
+# Define function to compute biased pmf
+def bias_pmf(pmf, label):
+    new_pmf = pmf.Copy(label=label)
+    for x, p in pmf.Items():
+        new_pmf.Mult(x, x)
+    new_pmf.Normalize()
+    return new_pmf
+
+# Compute biased pmf and print mean
+biased_pmf = bias_pmf(actual_pmf, label='observed')    
+print('Biased mean: ', biased_pmf.Mean())
+
+# Plot actual and biased distributions
+thinkplot.PrePlot(2)
+thinkplot.Pmfs([actual_pmf, biased_pmf])
+thinkplot.Show(xlabel='# of kids', ylabel='Probability')
+```
+
+#### Results
+
+```
+Actual mean:  1.024205155043831
+Biased mean:  2.403679100664282
+```
+
+![](/Users/scottbutters/Metis/dsp/lessons/statistics/3-1.png)
+
 ### Q3. [Think Stats Chapter 4 Exercise 2](statistics/4-2-random_dist.md) (random distribution)  
-This questions asks you to examine the function that produces random numbers.  Is it really random?  A good way to test that is to examine the pmf and cdf of the list of random numbers and visualize the distribution.  If you're not sure what pmf is, read more about it in Chapter 3.  
+This questions asks you to examine the function that produces random numbers.  Is it really random?  A good way to test that is to examine the pmf and cdf of the list of random numbers and visualize the distribution.  If you're not sure what pmf is, read more about it in Chapter 3. 
+
+### _Question:_
+
+This questions asks you to examine the function that produces random numbers. Is it really random? A good way to test that is to examine the pmf and cdf of the list of random numbers and visualize the distribution. If you're not sure what pmf is, read more about it in Chapter 3.
+
+The numbers generated by random.random are supposed to be uniform between 0 and 1; that is, every value in the range should have the same probability.
+Generate 1000 numbers from random.random and plot their PMF and CDF.
+Is the distribution uniform?
+
+### _Answer:_
+
+I used the code block below to investigate the question.
+
+```python
+import numpy as np
+rand_nums = np.random.random(1000)
+rand_pmf = thinkstats2.Pmf(rand_nums)
+
+# Plot PMF of 1000 random numbers betwen 0 and 1
+thinkplot.Hist(rand_pmf, width=0.0025)
+thinkplot.Config(xlabel='Num', ylabel='Probability')
+```
+
+![](/Users/scottbutters/Metis/dsp/lessons/statistics/4-2pmf.png)
+
+While the PMF gives the appearance of a uniform distribution, it's clear that how it's displayed is hugely dependent on the width of the bins. The default value will make the PMF render as if there's no data at all, and choices between 0.001 and 0.01 are suggestive of a uniform distribution but leave a lot to be desired. Let's check out the CDF. 
+
+```python
+rand_cdf = thinkstats2.Cdf(rand_nums)
+
+# Plot CDF of 1000 random numbers betwen 0 and 1
+thinkplot.Cdf(rand_cdf)
+thinkplot.Config(xlabel='Num', ylabel='Probability')
+```
+
+![](/Users/scottbutters/Metis/dsp/lessons/statistics/4-2cdf.png)
+
+Based on how linear the cdf is, it's fair to say that the distribution of random numbers is quite uniform. 
 
 ### Q4. [Think Stats Chapter 5 Exercise 1](statistics/5-1-blue_men.md) (normal distribution of blue men)
 This is a classic example of hypothesis testing using the normal distribution.  The effect size used here is the Z-statistic. 
 
+### _Question:_
 
+In the BRFSS (see Section 5.4), the distribution of heights is roughly normal with parameters µ = 178 cm and σ = 7.7 cm for men, and µ = 163 cm and σ = 7.3 cm for women. In order to join Blue Man Group, you have to be male between 5’10” and 6’1” (see http://bluemancasting.com). What percentage of the U.S. male population is in this range? Hint: use scipy.stats.norm.cdf.
+
+### _Answer:_
+
+I used the code block below to investigate the question.
+
+```python
+import scipy.stats
+
+# Generate normal distribution of heights for men with parameters from BRFSS
+mu = 178
+sigma = 7.7
+dist = scipy.stats.norm(loc=mu, scale=sigma)
+
+# Define lower and upper bounds
+lower_in = 70
+upper_in = 73
+
+# Convert to cm
+lower = lower_in * 2.54
+upper = upper_in * 2.54
+
+# Calculate percentiles for each to determine probability between threshholds
+lower_perc = dist.cdf(lower)
+upper_perc = dist.cdf(upper)
+prob_between = upper_perc - lower_perc
+
+print(prob_between)
+```
+
+#### Results
+
+```
+0.34274683763147457
+```
+
+Based on the mean and standard deviation reported by this data, approximately 34.3% of adult males are between 5'10" and 6'1".
 
 ### Q5. Bayesian (Elvis Presley twin) 
 
@@ -86,7 +263,29 @@ Bayes' Theorem is an important tool in understanding what we really know, given 
 
 Elvis Presley had a twin brother who died at birth.  What is the probability that Elvis was an identical twin? Assume we observe the following probabilities in the population: fraternal twin is 1/125 and identical twin is 1/300.  
 
->> REPLACE THIS TEXT WITH YOUR RESPONSE
+### _Answer:_
+
+Let's say that:
+
+- $P(T)$ represents the probability that a person is a twin
+- $P(F)$ represents the probability that a person is a fraternal twin; 1/125
+- $P(I)$ represents the probability that a person is an identical twin; 1/300
+
+Had we no prior information, we'd say that the probability Elvis was an identical twin is 1/300. However, given that we already know that Elvis was _some kind_ of twin, we can narrow down that probability a little bit. This is where Bayes' theorem comes in. We're looking for the probability that Elvis was an identical twin, _given that we know he was a twin_, or $P(I | T)$. According to Bayes' theorem:
+
+​	$P(I | T) = \frac {P(T | I)  P(I)}{P(T)}​$
+
+$P(T)$ is simply the sum of $P(I)$ and $P(F)$,
+
+​	$\Rightarrow P(T) = P(I) + P(F) = 1/125 + 1/300 = 17/1500$
+
+Since an identical twin is inherently a twin, $P(T | I) = 1$. Therefore we can say:
+
+​	$P(I | T) = \frac {P(T | I)  P(I)}{P(T)} = \frac {P(I)} {P(T)} = \frac {1/300} {17/1500} = \frac 5 {17}$
+
+```
+Thus, the probability that Elvis was an identical twin was 5/17, or ~29.4%.
+```
 
 ---
 
