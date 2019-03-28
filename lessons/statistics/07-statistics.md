@@ -292,7 +292,9 @@ Thus, the probability that Elvis was an identical twin was 5/17, or ~29.4%.
 ### Q6. Bayesian &amp; Frequentist Comparison  
 How do frequentist and Bayesian statistics compare?
 
->> REPLACE THIS TEXT WITH YOUR RESPONSE
+### _Answer:_
+
+Frequentist and Bayesian statistics are fundamentally different perpectives on the meaning of probability. By the frequentist definition, you can only calculate the probability of a repeatable random event, such as flipping a coin or drawing a red marble from a bag of mixed colors of marbles. This does not extend well to non-repeatable events, such as the probability that Arnold Schwarzenegger would defeat Dwayne 'The Rock' Johnson in a footrace. Bayesian statistics, however, allow you to represent the uncertainty of any event or hypothesis and makes use of prior knowledge to calculate new probability estimates. Whether or not you can use probability distributions over possible values of a parameter on which you have prior knowledge to calculate additional probability estimates of nonrandom/repeatable events is the divisive difference between the two schools.
 
 ---
 
@@ -303,10 +305,141 @@ The following exercises are optional, but we highly encourage you to complete th
 ### Q7. [Think Stats Chapter 7 Exercise 1](statistics/7-1-weight_vs_age.md) (correlation of weight vs. age)
 In this exercise, you will compute the effect size of correlation.  Correlation measures the relationship of two variables, and data science is about exploring relationships in data.    
 
+### _Question:_
+
+Using data from the NSFG, make a scatter plot of birth weight versus mother’s age. Plot percentiles of birth weight versus mother’s age. Compute Pearson’s and Spearman’s correlations. How would you characterize the relationship between these variables?
+
+### _Answer:_
+
+#### Scatterplot of birth weight vs mother's age:
+
+```python
+import first
+
+live, firsts, others = first.MakeFrames()
+live = live.dropna(subset=['agepreg', 'totalwgt_lb'])
+mother_age = live['agepreg']
+birth_weight = live['totalwgt_lb']
+thinkplot.Scatter(mother_age, birth_weight, alpha=0.1, s=10)
+thinkplot.Config(xlabel='Mother\'s age (years)',
+                 ylabel='Birth weight (kb)',
+                 legend=False)
+```
+
+![](7-1scatter.png)
+
+#### Percentiles of birth weight vs mother's age:
+
+```python
+# Divide the dataset into groups by mother's age
+bins = np.arange(10, 45, 3)
+indices = np.digitize(live['agepreg'], bins)
+groups = live.groupby(indices)
+
+# Compute the CDF of weight within each group
+mean_ages = [group['agepreg'].mean() for i, group in groups]
+cdfs = [thinkstats2.Cdf(group['totalwgt_lb']) for i, group in groups]
+
+# Extract and plot the 25th, 50th, and 75th percentile from each group
+for percent in [75, 50, 25]:
+    weight_percentiles = [cdf.Percentile(percent) for cdf in cdfs]
+    label = '%dth' % percent
+    thinkplot.Plot(mean_ages, weight_percentiles, label=label)
+    
+thinkplot.Config(xlabel='Mother\'s age (years)',
+                 ylabel='Birth weight (kb)',
+                 legend=False)
+```
+
+![](7-1percentiles.png)
+
+#### Pearson's correlation of birth weight vs mother's age:
+
+```python
+Corr(mother_age, birth_weight)
+```
+
+```
+0.06883397035410908
+```
+
+#### Spearman's correlation of birth weight vs mother's age:
+
+```python
+SpearmanCorr(mother_age, birth_weight)
+```
+
+```
+0.09461004109658226
+```
+
+#### Conclusion:
+
+Going off just the scatter plot, we can see that mother's age and child's birth weight are nearly independent. Looking at a percentile plot, here binned at 3 years per group and showing the 25th, 50th, and 75th percentiles, we can see what appears to be a slight upward trend of increasing birth weight as a mother gets older until a there's a relatively sharp drop around age 40. Our correlation factors back up this observation in that both are positive, but only slightly. The Spearman correlation is slightly higher than the Pearson correlation, possibly due to some nonlinearity, skew, or outliers in the data that Pearson's method does not handle quite as well.
+
 ### Q8. [Think Stats Chapter 8 Exercise 2](statistics/8-2-sampling_dist.md) (sampling distribution)
 In the theoretical world, all data related to an experiment or a scientific problem would be available.  In the real world, some subset of that data is available.  This exercise asks you to take samples from an exponential distribution and examine how the standard error and confidence intervals vary with the sample size.
 
+### _Question:_
+
+Suppose you draw a sample with size n = 10 from an exponential distribution with λ = 2. Simulate this experiment 1000 times and plot the sampling distribution of the estimate L. Compute the standard error of the estimate and the 90% confidence interval. Repeat the experiment with a few different values of n and make a plot of standard error versus n.
+
+### _Answer:_
+
+The code I used to answer this question is as follows:
+
+```python
+# Tweak the provided function to output estimates and standard error
+def Estimate4(n=7, iters=1000):
+    lam = 2
+
+    means = []
+    for _ in range(iters):
+        xs = np.random.exponential(1.0/lam, n)
+        L = 1 / np.mean(xs)
+        means.append(L)
+    
+    std_err = RMSE(means, lam)
+    return means, std_err
+
+Ls, err = Estimate4(n=10, iters=1000)
+
+# Calculate and plot sampling distribution
+cdf = thinkstats2.Cdf(Ls)
+thinkplot.Cdf(cdf)
+thinkplot.Config(xlabel='Sample mean',
+                 ylabel='CDF')
+
+# Calculate 90% confidence interval
+ci = cdf.Percentile(5), cdf.Percentile(95)
+
+# Print results
+print('Standard error of L is', err)
+print('90% confidence interval of L is', ci)
+```
+
+```
+Standard error of L is 0.7939181717149983
+90% confidence interval of L is (1.275354190509593, 3.5919153930552072)
+```
+
+![](8-2cdf.png)
+
+Now repeating the exercise but with values of n ranging from 5 to 100:
+
+```python
+# Generate lists of ns and associated standard errors, then plot
+ns = list(range(5, 100))
+errs = [(Estimate4(n=n, iters=1000))[1] for n in ns]
+plt.scatter(ns, errs)
+```
+
+![](8-2scatter.png)
+
+As expected, the error is reduced as we increase the value of n.
+
 ### Q9. [Think Stats Chapter 6 Exercise 1](statistics/6-1-household_income.md) (skewness of household income)
+
 ### Q10. [Think Stats Chapter 8 Exercise 3](statistics/8-3-scoring.md) (scoring)
 ### Q11. [Think Stats Chapter 9 Exercise 2](statistics/9-2-resampling.md) (resampling)
 
