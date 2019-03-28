@@ -440,8 +440,290 @@ As expected, the error is reduced as we increase the value of n.
 
 ### Q9. [Think Stats Chapter 6 Exercise 1](statistics/6-1-household_income.md) (skewness of household income)
 
+### _Question:_
+
+The distribution of income is famously skewed to the right. In this exercise, we’ll measure how strong that skew is.
+
+The Current Population Survey (CPS) is a joint effort of the Bureau of Labor Statistics and the Census Bureau to study income and related variables. Data collected in 2013 is available from http://www.census.gov/hhes/www/cpstables/032013/hhinc/toc.htm. I downloaded `hinc06.xls`, which is an Excel spreadsheet with information about household income, and converted it to `hinc06.csv`, a CSV file you will find in the repository for this book. You will also find `hinc2.py`, which reads this file and transforms the data.
+
+The dataset is in the form of a series of income ranges and the number of respondents who fell in each range. The lowest range includes respondents who reported annual household income “Under \$5000.” The highest range
+includes respondents who made “$250,000 or more.”
+
+To estimate mean and other statistics from these data, we have to make some assumptions about the lower and upper bounds, and how the values are distributed in each range. `hinc2.py` provides `InterpolateSample`, which shows one way to model this data. It takes a DataFrame with a column, `income`, that contains the upper bound of each range, and `freq`, which contains the number of respondents in each frame.
+
+It also takes `log_upper`, which is an assumed upper bound on the highest range, expressed in `log10` dollars. The default value, `log_upper=6.0` represents the assumption that the largest income among the respondents is $10^6$, or one million dollars.
+
+`InterpolateSample` generates a pseudo-sample; that is, a sample of household incomes that yields the same number of respondents in each range as the actual data. It assumes that incomes in each range are equally spaced on a `log10` scale.
+
+Compute the median, mean, skewness and Pearson’s skewness of the resulting sample. What fraction of households reports a taxable income below the mean? How do the results depend on the assumed upper bound?
+
+### _Answer:_
+
+The following is a slightly condensed and rearranged version of the code provided in thinkstats ch06 notebook, which I used as my starting point.
+
+```python
+# Import data into df
+import hinc
+income_df = hinc.ReadData()
+
+
+def InterpolateSample(df, log_upper=6.0):
+    """Makes a sample of log10 household income.
+
+    Assumes that log10 income is uniform in each range.
+
+    df: DataFrame with columns income and freq
+    log_upper: log10 of the assumed upper bound for the highest range
+
+    returns: NumPy array of log10 household income
+    """
+    # compute the log10 of the upper bound for each range
+    df['log_upper'] = np.log10(df.income)
+
+    # get the lower bounds by shifting the upper bound and filling in
+    # the first element
+    df['log_lower'] = df.log_upper.shift(1)
+    df.loc[0, 'log_lower'] = 3.0
+
+    # plug in a value for the unknown upper bound of the highest range
+    df.loc[41, 'log_upper'] = log_upper
+    
+    # use the freq column to generate the right number of values in
+    # each range
+    arrays = []
+    for _, row in df.iterrows():
+        vals = np.linspace(row.log_lower, row.log_upper, row.freq)
+        arrays.append(vals)
+
+    # collect the arrays into a single sample
+    log_sample = np.concatenate(arrays)
+    return log_sample
+
+# Generate interpolated log sample of data and cdf
+log_sample = InterpolateSample(income_df, log_upper=6.0)
+log_cdf = thinkstats2.Cdf(log_sample)
+
+# Convert back to linear sample and generate cdf
+sample = np.power(10, log_sample)
+cdf = thinkstats2.Cdf(sample)
+```
+
+Calculating the median:
+
+```python
+median = cdf.Value(0.5)
+print('The median of the sample is:\n', round(median, 2))
+```
+
+```
+The median of the sample is:
+ 51226.45
+```
+
+Calculating the mean:
+
+```python
+mean = sample.mean()
+print('The mean of the sample is:\n', round(mean, 2))
+```
+
+```
+The mean of the sample is:
+ 74278.71
+```
+
+Calculating the skewness:
+
+```python
+# Calculating skew and Pearson skew using the provided functions
+Skewness(sample), PearsonMedianSkewness(sample)
+```
+
+```
+(4.949920244429583, 0.7361258019141782)
+```
+
+Okay, but that was too easy and not very satisfying or enlightening. Coding it myself:
+
+```python
+# Calculating standard deviation of sample
+std = sample.std()
+# Calculating skewness of the sample
+third_central_moment = sum((x - mean)**3 for x in sample) / len(sample)
+skew = third_central_moment / std**3
+
+# Calculating Pearson's skewness of the sample
+pearson_skew = 3 * (mean - median) / std
+
+print('Skewness:', round(skew,2))
+print("Pearson's skewness:", round(pearson_skew, 2))
+```
+
+```
+Skewness: 4.95
+Pearson's skewness: 0.74
+```
+
+To find the proportion of households reporting a taxable income below the mean, we can use the method `cdf.Prob(x)`, which returns the probability that a data point will be below `x` (in this case, the mean).
+
+```python
+cdf.Prob(mean)
+```
+
+```
+0.660005879566872
+```
+
+So about 2/3 of the sample population has an income below the sample mean. These results are of course heavily dependent on what we set as our assumed upper bound, since the higher we set that upper bound, the more our data will skew to the right, thus shifting our mean higher. For example, if we set our upper bound to be 10 million instead of 1 million:
+
+```python
+# Generate interpolated log sample of data and cdf
+log_sample = InterpolateSample(income_df, log_upper=7)
+log_cdf = thinkstats2.Cdf(log_sample)
+
+# Convert back to linear sample and generate cdf
+sample = np.power(10, log_sample)
+cdf = thinkstats2.Cdf(sample)
+
+# Calculate and print sample statistics
+# Median and mean
+median = cdf.Value(0.5)
+mean = sample.mean()
+print('The median of the sample is:\n', round(median, 2))
+print('The mean of the sample is:\n', round(mean, 2))
+
+# Standard deviation of sample
+std = sample.std()
+
+# Skewness of the sample
+third_central_moment = sum((x - mean)**3 for x in sample) / len(sample)
+skew = third_central_moment / std**3
+
+# Pearson's skewness of the sample
+pearson_skew = 3 * (mean - median) / std
+
+print('Skewness:\n', round(skew,2))
+print("Pearson's skewness:\n", round(pearson_skew, 2))
+
+# Probability of reporting less income than the sample mean
+print('Probability of earning below mean income:\n', 
+      round(cdf.Prob(mean), 2))
+```
+
+```
+The median of the sample is:
+ 51226.45
+The mean of the sample is:
+ 124267.4
+Skewness:
+ 11.6
+Pearson's skewness:
+ 0.39
+Probability of earning below mean income:
+ 0.86
+```
+
+That dramatically increased the mean, and thus the skewness, while the median barely moved at all! Clearly our assumption about the upper limit of the data has a quite significant affect on our results, and our skewness statistics are highly untrustworthy without more confidence in that data.
+
 ### Q10. [Think Stats Chapter 8 Exercise 3](statistics/8-3-scoring.md) (scoring)
+
+### _Question:_
+
+In games like hockey and soccer, the time between goals is roughly exponential. So you could estimate a team’s goal-scoring rate by observing the number of goals they score in a game. This estimation process is a little different from sampling the time between goals, so let’s see how it works.
+
+Write a function that takes a goal-scoring rate, `lam`, in goals per game, and simulates a game by generating the time between goals until the total time exceeds 1 game, then returns the number of goals scored.
+
+Write another function that simulates many games, stores the estimates of `lam`, then computes their mean error and RMSE.
+
+Is this way of making an estimate biased? Plot the sampling distribution of the estimates and the 90% confidence interval. What is the standard error? What happens to sampling error for increasing values of lam?
+
+### _Answer:_
+
+I'm not entirely sure why the notebook provides the answer to the first part of the question…but here's my slightly modified version of that:
+
+```python
+def simulate_game(lam):
+    """
+    Simulates a game and returns the estimated rate of goals per game
+    lam: actual goal scoring rate in goals per game
+    """
+    goals = 0
+    t = 0
+    while True:
+        time_between_goals = random.expovariate(lam)
+        t += time_between_goals
+        if t > 1:
+            break
+        goals += 1
+
+    # Estimated goal-scoring rate is the actual number of goals scored
+    L = goals
+    return L
+```
+
+Now producing another function to simulate many games and compute the error statistics:
+
+```python
+def simulate_games(lam, n):
+    lams = [simulate_game(lam) for _ in range(n)]
+    mean = sum(lams) / n
+    mean_error = MeanError(lams, lam)
+    rmse = RMSE(lams, lam)
+    return lams, mean_error, rmse
+
+lams, mean_error, rmse = simulate_games(5, 1000)
+print('Mean error is:\n', mean_error)
+print('RMSE is:\n', rmse)
+
+# Calculate and plot sampling distribution
+cdf = thinkstats2.Cdf(lams)
+thinkplot.Cdf(cdf)
+thinkplot.Config(xlabel='Sample mean',
+                 ylabel='CDF')
+
+# Calculate 90% confidence interval
+ci = cdf.Percentile(5), cdf.Percentile(95)
+
+# Print results
+print('Standard error of L is', rmse)
+print('90% confidence interval of L is', ci)
+```
+
+```
+Mean error is:
+ 0.013
+RMSE is:
+ 2.2603097132915213
+Standard error of L is 2.2603097132915213
+90% confidence interval of L is (2, 9)
+```
+
+![](8-3cdf.png)
+
+Of course, that was with a lambda of 5. Let's see what happens to the error values as lambda increases.
+
+```python
+lams = range(1, 50)
+
+# Simulate over all lams and collect rmses for each
+errors = [simulate_games(lam, 1000)[2] for lam in lams]
+
+plt.scatter(lams, errors)
+plt.xlabel('Goal rate')
+plt.ylabel('Sampling error')
+```
+
+![](8-3scatter.png)
+
+Thus, for increasing values of lambda we can see that the sampling error also increases.
+
 ### Q11. [Think Stats Chapter 9 Exercise 2](statistics/9-2-resampling.md) (resampling)
+
+
+
+
+
+
 
 ---
 
