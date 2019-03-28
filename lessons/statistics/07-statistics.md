@@ -171,7 +171,7 @@ Actual mean:  1.024205155043831
 Biased mean:  2.403679100664282
 ```
 
-![](/Users/scottbutters/Metis/dsp/lessons/statistics/3-1.png)
+![](3-1.png)
 
 ### Q3. [Think Stats Chapter 4 Exercise 2](statistics/4-2-random_dist.md) (random distribution)  
 This questions asks you to examine the function that produces random numbers.  Is it really random?  A good way to test that is to examine the pmf and cdf of the list of random numbers and visualize the distribution.  If you're not sure what pmf is, read more about it in Chapter 3. 
@@ -198,7 +198,7 @@ thinkplot.Hist(rand_pmf, width=0.0025)
 thinkplot.Config(xlabel='Num', ylabel='Probability')
 ```
 
-![](/Users/scottbutters/Metis/dsp/lessons/statistics/4-2pmf.png)
+![](4-2pmf.png)
 
 While the PMF gives the appearance of a uniform distribution, it's clear that how it's displayed is hugely dependent on the width of the bins. The default value will make the PMF render as if there's no data at all, and choices between 0.001 and 0.01 are suggestive of a uniform distribution but leave a lot to be desired. Let's check out the CDF. 
 
@@ -210,7 +210,7 @@ thinkplot.Cdf(rand_cdf)
 thinkplot.Config(xlabel='Num', ylabel='Probability')
 ```
 
-![](/Users/scottbutters/Metis/dsp/lessons/statistics/4-2cdf.png)
+![](4-2cdf.png)
 
 Based on how linear the cdf is, it's fair to say that the distribution of random numbers is quite uniform. 
 
