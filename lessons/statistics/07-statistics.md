@@ -719,11 +719,58 @@ Thus, for increasing values of lambda we can see that the sampling error also in
 
 ### Q11. [Think Stats Chapter 9 Exercise 2](statistics/9-2-resampling.md) (resampling)
 
+### _Question:_
 
+In Section 9.3, we simulated the null hypothesis by permutation; that is, we treated the observed values as if they represented the entire population, and randomly assigned the members of the population to the
+two groups.
 
+An alternative is to use the sample to estimate the distribution for the population, then draw a random sample from that distribution. This process is called **resampling**. There are several ways to implement resampling, but
+one of the simplest is to draw a sample with replacement from the observed values, as in Section 9.10.
 
+Write a class named `DiffMeansResample` that inherits from `DiffMeansPermute` and overrides `RunModel` to implement resampling, rather than permutation.
 
+Use this model to test the differences in pregnancy length and birth weight. How much does the model affect the results?
 
+## _Answer:_
+
+I used the following code to answer this question:
+
+```python
+# Collect data
+live, firsts, others = first.MakeFrames()
+prglngth_data = firsts['prglngth'].values, others['prglngth'].values
+birthwgt_data = firsts['totalwgt_lb'].values, others['totalwgt_lb'].values
+
+# Run hypothesis test on pregnancy lengths with resampled data
+pvalue = DiffMeansResample(prglngth_data).PValue()
+print('\nComparing pregnancy lengths with resampling, P value is:\n', pvalue)
+
+# Run hypothesis test on pregnancy lengths with permuted data
+pvalue = DiffMeansPermute(prglngth_data).PValue()
+print('Comparing pregnancy lengths with permutation of the means, P value is:\n', pvalue)
+
+# Run hypothesis test on birth weights with resampled data
+pvalue = DiffMeansResample(birthwgt_data).PValue()
+print('\nComparing pregnancy lengths with resampling, P value is:\n', pvalue)
+
+# Run hypothesis test on birth weights with permuted data
+pvalue = DiffMeansPermute(birthwgt_data).PValue()
+print('Comparing pregnancy lengths with permutation of the means, P value is:\n', pvalue)
+```
+
+```
+Comparing pregnancy lengths with resampling, P value is:
+ 0.151
+Comparing pregnancy lengths with permutation of the means, P value is:
+ 0.151
+
+Comparing pregnancy lengths with resampling, P value is:
+ 0.0
+Comparing pregnancy lengths with permutation of the means, P value is:
+ 0.0
+```
+
+With multiple iterations I'd see the p-value for pregnancy lengths bounce around a bit, but the two methods would always track together. It seems that testing the differences by resampling and permutation yield pretty similar in results, and in this case I can't think of a clear reason to prefer one over the other.
 
 ---
 
